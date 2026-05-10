@@ -1,0 +1,185 @@
+openapi: "3.1.0"
+info:
+  title: API de Log de Performance
+  version: "1.0.0"
+  description: >
+    Registra sessões de trabalho com nível de foco e entrega
+    um diagnóstico inteligente de produtividade.
+
+paths:
+
+  /registro-foco:
+    post:
+      operationId: criarRegistroFoco
+      summary: Registrar uma sessão de trabalho
+      tags: [Registro]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroFocoRequest'
+            example:
+              nivel_foco: 4
+              tempo_minutos: 50
+              comentario: "Implementando a rota de diagnóstico sem interrupções"
+              categoria: coding
+              tags: ["fastapi", "python", "sqlite"]
+      responses:
+        "201":
+          description: Registro criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistroFocoResponse'
+        "422":
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroValidacao'
+        "429":
+          description: Muitas requisições (rate limit excedido)
+        "500":
+          description: Erro interno do servidor
+
+  /diagnostico-produtividade:
+    get:
+      operationId: obterDiagnostico
+      summary: Diagnóstico geral de todos os registros
+      tags: [Diagnóstico]
+      responses:
+        "200":
+          description: Diagnóstico calculado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosticoResponse'
+        "404":
+          description: Nenhum registro encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroNaoEncontrado'
+        "500":
+          description: Erro interno do servidor
+
+components:
+  schemas:
+
+    CategoriaEnum:
+      type: string
+      enum: [coding, reuniao, estudo, leitura, planejamento]
+
+    TendenciaEnum:
+      type: string
+      enum: [melhora, piora, estavel, dados_insuficientes]
+
+    RegistroFocoRequest:
+      type: object
+      required: [nivel_foco, tempo_minutos, comentario]
+      properties:
+        nivel_foco:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: "1 = muito distraído, 5 = estado de flow"
+        tempo_minutos:
+          type: integer
+          minimum: 1
+          description: Duração da sessão em minutos
+        comentario:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: O que foi feito ou o que causou distração
+        categoria:
+          $ref: '#/components/schemas/CategoriaEnum'
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          nullable: true
+        data:
+          type: string
+          format: date-time
+          nullable: true
+          description: Preenchido automaticamente com a data/hora atual se omitido
+
+    RegistroFocoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        nivel_foco:
+          type: integer
+        tempo_minutos:
+          type: integer
+        comentario:
+          type: string
+        categoria:
+          $ref: '#/components/schemas/CategoriaEnum'
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        data:
+          type: string
+          format: date-time
+        classificacao_foco:
+          type: string
+          description: "Rótulo textual do nível (ex: 'Estado de Flow')"
+
+    DiagnosticoResponse:
+      type: object
+      properties:
+        total_registros:
+          type: integer
+        media_foco:
+          type: number
+          format: float
+        tempo_total_minutos:
+          type: integer
+        tempo_total_horas:
+          type: number
+          format: float
+        nivel_predominante:
+          type: string
+        distribuicao_categorias:
+          type: object
+          additionalProperties:
+            type: integer
+        top_tags:
+          type: array
+          items:
+            type: string
+        feedback:
+          type: string
+        sugestoes:
+          type: array
+          items:
+            type: string
+        indice_consistencia:
+          type: number
+          format: float
+          description: "0.0 = foco errático, 1.0 = foco consistente"
+        tendencia:
+          $ref: '#/components/schemas/TendenciaEnum'
+
+    ErroValidacao:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+
+    ErroNaoEncontrado:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Nenhum registro encontrado. Comece registrando sua primeira sessão."
