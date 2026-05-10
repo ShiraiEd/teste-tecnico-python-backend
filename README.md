@@ -141,6 +141,31 @@ openapi.yaml                 # Contrato da API (spec-first)
 CLAUDE.md                    # Instruções para Claude Code
 ```
 
+## Decisões de arquitetura
+
+### Spec-driven design
+O `openapi.yaml` foi escrito antes de qualquer linha de código Python. Isso inverte o fluxo comum: em vez de documentar o que foi feito, o contrato define o que será feito. O benefício prático é que todas as decisões de nomes de campos, tipos, validações e respostas de erro foram tomadas e revisadas antes da implementação — evitando retrabalho e garantindo que a documentação nunca fique desatualizada em relação ao código.
+
+### FastAPI em vez de Flask ou Django
+FastAPI foi escolhido porque integra validação (Pydantic), serialização e documentação automática em uma única camada, sem bibliotecas extras. Para uma API que exige validação rigorosa de campos (`nivel_foco` entre 1 e 5, `tempo_minutos` positivo), isso elimina código de validação manual e entrega respostas de erro 422 com mensagens descritivas automaticamente. Flask exigiria essas validações escritas à mão. Django, por sua vez, traria um ecossistema completo (ORM, admin, autenticação, migrations) pensado para aplicações web maiores — tudo isso seria overhead desnecessário para dois endpoints, além de exigir mais tempo de configuração inicial sem agregar valor ao escopo do projeto.
+
+### SQLite com `sqlite3` puro em vez de ORM
+SQLAlchemy ou SQLModel adicionariam abstração útil em projetos maiores, mas para dois endpoints com uma tabela simples o custo de configuração supera o benefício. Usar `sqlite3` puro com queries parametrizadas demonstra domínio direto de SQL, torna o código mais fácil de auditar por segurança (sem mágica de ORM) e mantém o número de dependências no mínimo. A troca de banco de dados no futuro exigiria mudar apenas `storage/database.py`.
+
+### Separação em camadas (routes / services / storage)
+A lógica de negócio foi isolada em `services/` sem nenhuma dependência do FastAPI. Isso tem uma consequência direta: os testes unitários em `test_services.py` testam a lógica de diagnóstico (médias, tendência, consistência) sem subir servidor, sem fazer requisições HTTP e sem banco de dados — são instantâneos e determinísticos. Se a lógica estivesse nas rotas, qualquer teste exigiria infraestrutura HTTP completa.
+
+### Middleware de logging
+Em vez de adicionar `print()` ou logs espalhados pelo código, um middleware centraliza o registro de todas as requisições com método, path, status code e tempo de resposta. Isso cobre 100% dos endpoints automaticamente e é o padrão de observabilidade mínima em qualquer API em produção — o desenvolvedor vê no terminal exatamente o que está acontecendo sem instrumentar cada rota.
+
+### Rate limiting com slowapi
+O endpoint de escrita (`POST /registro-foco`) está sujeito a abuso — um loop simples poderia inserir milhares de registros e degradar o diagnóstico ou encher o disco. O rate limiting por IP (30 req/min) é a camada mais simples de proteção contra isso e exige apenas um decorator na rota, sem infraestrutura adicional.
+
+### Testes em dois níveis
+Os testes unitários (`test_services.py`) cobrem a lógica pura com casos de borda precisos — faixas de média, desvio padrão, tendência com dados insuficientes. Os testes de integração (`test_registro_foco.py`, `test_diagnostico.py`) usam o `TestClient` do FastAPI com um banco SQLite em memória isolado por fixture, garantindo que cada teste começa do zero sem interferência entre casos. Essa separação permite identificar rapidamente se um erro é de lógica ou de infraestrutura HTTP.
+
+---
+
 ## Segurança
 
 - Validação automática de todos os campos via Pydantic (tipos, ranges, tamanhos)
