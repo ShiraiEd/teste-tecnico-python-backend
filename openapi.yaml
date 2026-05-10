@@ -94,22 +94,26 @@ components:
           maxLength: 500
           description: O que foi feito ou o que causou distração
         categoria:
-          $ref: '#/components/schemas/CategoriaEnum'
-          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/CategoriaEnum'
+            - type: "null"
         tags:
-          type: array
-          items:
-            type: string
-          maxItems: 10
-          nullable: true
+          oneOf:
+            - type: array
+              items:
+                type: string
+              maxItems: 10
+            - type: "null"
         data:
-          type: string
-          format: date-time
-          nullable: true
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
           description: Preenchido automaticamente com a data/hora atual se omitido
 
     RegistroFocoResponse:
       type: object
+      required: [id, nivel_foco, tempo_minutos, comentario, tags, data, classificacao_foco]
       properties:
         id:
           type: integer
@@ -120,8 +124,9 @@ components:
         comentario:
           type: string
         categoria:
-          $ref: '#/components/schemas/CategoriaEnum'
-          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/CategoriaEnum'
+            - type: "null"
         tags:
           type: array
           items:
@@ -135,6 +140,19 @@ components:
 
     DiagnosticoResponse:
       type: object
+      required:
+        - total_registros
+        - media_foco
+        - tempo_total_minutos
+        - tempo_total_horas
+        - nivel_predominante
+        - distribuicao_categorias
+        - top_tags
+        - feedback
+        - sugestoes
+        - indice_consistencia
+        - tendencia
+        - streak_dias
       properties:
         total_registros:
           type: integer
@@ -168,6 +186,9 @@ components:
           description: "0.0 = foco errático, 1.0 = foco consistente"
         tendencia:
           $ref: '#/components/schemas/TendenciaEnum'
+        streak_dias:
+          type: integer
+          description: "Maior sequência de dias consecutivos com pelo menos um registro"
 
     ErroValidacao:
       type: object

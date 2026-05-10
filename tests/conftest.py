@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.storage.database import create_tables, get_connection, db_session
+from app.storage.database import get_connection
 
 TEST_DB = ":memory:"
 

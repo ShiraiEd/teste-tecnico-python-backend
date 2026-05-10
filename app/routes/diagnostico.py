@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.models.diagnostico import DiagnosticoResponse
 from app.services import diagnostico_service
-from app.storage import registro_repository
+from app.storage.registro_repository import registro_repository
 from app.storage.database import db_session
 
 router = APIRouter(tags=["Diagnóstico"])

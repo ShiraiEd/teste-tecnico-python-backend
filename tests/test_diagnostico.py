@@ -47,9 +47,25 @@ def test_campos_obrigatorios_no_response(client):
     client.post("/registro-foco", json=PAYLOAD_BASE)
     data = client.get("/diagnostico-produtividade").json()
     campos = [
-        "total_registros", "media_foco", "tempo_total_minutos", "tempo_total_horas",
-        "nivel_predominante", "distribuicao_categorias", "top_tags",
-        "feedback", "sugestoes", "indice_consistencia", "tendencia",
+        "total_registros",
+        "media_foco",
+        "tempo_total_minutos",
+        "tempo_total_horas",
+        "nivel_predominante",
+        "distribuicao_categorias",
+        "top_tags",
+        "feedback",
+        "sugestoes",
+        "indice_consistencia",
+        "tendencia",
+        "streak_dias",
     ]
     for campo in campos:
         assert campo in data, f"Campo ausente: {campo}"
+
+
+def test_streak_dias_presente_no_response(client):
+    client.post("/registro-foco", json=PAYLOAD_BASE)
+    data = client.get("/diagnostico-produtividade").json()
+    assert isinstance(data["streak_dias"], int)
+    assert data["streak_dias"] >= 1
